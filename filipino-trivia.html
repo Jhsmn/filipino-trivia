@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Alam Mo Ba? — Filipino Trivia</title>
+<style>
+  :root{
+    --blue:#0038a8; --red:#ce1126; --yellow:#fcd116; --white:#ffffff;
+    --bg1:#0038a8; --bg2:#ce1126;
+    --card:#ffffff; --text:#1a1a1a; --muted:#5b5b5b;
+    box-sizing:border-box;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;}
+  html{scroll-padding-top:env(safe-area-inset-top,0px); height:100%;}
+  body{
+    height:100%; margin:0; font-family:'Segoe UI', system-ui, -apple-system, sans-serif;
+    background:linear-gradient(135deg,var(--bg1) 0%, var(--bg1) 35%, var(--yellow) 35%, var(--yellow) 65%, var(--bg2) 65%);
+    display:flex; align-items:center; justify-content:center;
+    padding:24px 16px; color:var(--text);
+  }
+  .wrap{width:100%; max-width:480px;}
+  .card{
+    background:var(--card); border-radius:20px; padding:28px 24px;
+    box-shadow:0 20px 50px rgba(0,0,0,.35);
+    position:relative; overflow:hidden;
+  }
+  .card::before{
+    content:""; position:absolute; top:0; left:0; right:0; height:8px;
+    background:linear-gradient(90deg,var(--blue),var(--yellow),var(--red));
+  }
+  h1{
+    font-size:1.5rem; margin:8px 0 2px; text-align:center; color:var(--blue);
+  }
+  .sub{text-align:center; color:var(--muted); font-size:.9rem; margin-bottom:18px;}
+  .sun{
+    display:block; margin:0 auto 6px; width:44px; height:44px;
+  }
+  .progress-row{display:flex; justify-content:space-between; font-size:.85rem; color:var(--muted); margin-bottom:8px;}
+  .bar{height:8px; background:#eee; border-radius:99px; overflow:hidden; margin-bottom:20px;}
+  .bar-fill{height:100%; background:linear-gradient(90deg,var(--blue),var(--red)); width:0%; transition:width .3s ease;}
+  .question{font-size:1.15rem; font-weight:600; margin-bottom:18px; line-height:1.4;}
+  .options{display:grid; gap:10px;}
+  .opt{
+    text-align:left; padding:13px 16px; border-radius:12px; border:2px solid #e4e4e4;
+    background:#fafafa; font-size:.98rem; cursor:pointer; transition:.15s;
+    color:var(--text);
+  }
+  .opt:hover{border-color:var(--blue); background:#f0f4ff;}
+  .opt.correct{background:#e6f7ea; border-color:#2e9e4f; color:#1c6b34; font-weight:600;}
+  .opt.wrong{background:#fdeaea; border-color:var(--red); color:#a30f1c; font-weight:600;}
+  .opt[disabled]{cursor:default;}
+  .feedback{
+    margin-top:14px; padding:12px 14px; border-radius:12px; font-size:.92rem;
+    background:#fff8e1; border-left:4px solid var(--yellow); display:none;
+  }
+  .feedback.show{display:block;}
+  .footer-row{display:flex; justify-content:space-between; align-items:center; margin-top:20px;}
+  .next-btn{
+    background:var(--blue); color:#fff; border:none; padding:11px 22px; border-radius:99px;
+    font-size:.95rem; font-weight:600; cursor:pointer; display:none;
+  }
+  .next-btn.show{display:inline-block;}
+  .score-tag{font-size:.85rem; color:var(--muted);}
+  .end{text-align:center;}
+  .end h2{color:var(--blue); margin-bottom:4px;}
+  .end .big{font-size:2.6rem; font-weight:800; color:var(--red); margin:10px 0;}
+  .end p{color:var(--muted); margin-bottom:20px;}
+  .again-btn{
+    background:var(--red); color:#fff; border:none; padding:12px 28px; border-radius:99px;
+    font-size:1rem; font-weight:700; cursor:pointer;
+  }
+  .high{font-size:.85rem; color:var(--muted); margin-top:10px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" id="card">
+    <svg class="sun" viewBox="0 0 100 100"><circle cx="50" cy="50" r="18" fill="#fcd116"/><g fill="#fcd116">
+      <script>/*noop*/</script>
+    </g></svg>
+    <h1>Alam Mo Ba?</h1>
+    <div class="sub">A quick trivia game about the Philippines</div>
+    <div id="quizArea"></div>
+  </div>
+</div>
+
+<script>
+const questionPool = [
+  {q:"What is the capital of the Philippines?", opts:["Cebu City","Quezon City","Manila","Davao City"], a:2,
+   fact:"Manila has been the capital since Spanish colonial times, though nearby Quezon City was briefly the capital from 1948 to 1976."},
+  {q:"The Philippine flag is flown upside down (red on top) to signal what?", opts:["A national holiday","A state of war","A victory celebration","Mourning"], a:1,
+   fact:"Flying the flag with the red stripe on top is a traditional signal that the country is in a state of war."},
+  {q:"Which of these is a traditional Filipino martial art?", opts:["Arnis","Sipa","Sungka","Patintero"], a:0,
+   fact:"Arnis (also called Eskrima or Kali) is the national martial art and sport of the Philippines, using sticks, blades, and empty-hand techniques."},
+  {q:"What is 'jeepney' most closely associated with?", opts:["A type of rice dish","A folk dance","A public transport vehicle","A festival"], a:2,
+   fact:"Jeepneys, originally built from surplus US military jeeps after WWII, became the most popular form of public transport in the Philippines."},
+  {q:"Which archipelago group is NOT one of the Philippines' three main island groups?", opts:["Luzon","Visayas","Mindanao","Palawan"], a:3,
+   fact:"Palawan is a province, but the country's three main island groups are Luzon, Visayas, and Mindanao."},
+  {q:"What is 'Bahay Kubo' most commonly known as?", opts:["A folk song about vegetables","A traditional dance","A type of boat","A rice terrace"], a:0,
+   fact:"'Bahay Kubo' is a beloved folk song that lists vegetables grown around a traditional nipa hut."},
+  {q:"What are the famous rice terraces in the Cordilleras called?", opts:["Chocolate Hills","Banaue Rice Terraces","Taal Terraces","Mayon Fields"], a:1,
+   fact:"The Banaue Rice Terraces, carved into the mountains over 2,000 years ago, are often called the 'Eighth Wonder of the World.'"},
+  {q:"Which Philippine dessert is made of shaved ice, milk, and mixed sweet toppings?", opts:["Turon","Halo-halo","Biko","Leche flan"], a:1,
+   fact:"Halo-halo literally means 'mix-mix' in Tagalog, referring to the way you stir all the layered ingredients together."},
+  {q:"What is the local term for a Filipino sari-sari store?", opts:["A small neighborhood convenience store","A public market","A rice mill","A fishing boat"], a:0,
+   fact:"'Sari-sari' means 'variety,' and these small home-based stores are a common fixture in Filipino neighborhoods."},
+  {q:"Which national hero wrote the novels Noli Me Tangere and El Filibusterismo?", opts:["Andres Bonifacio","Emilio Aguinaldo","Jose Rizal","Apolinario Mabini"], a:2,
+   fact:"Jose Rizal, the national hero of the Philippines, wrote both novels which helped inspire the Philippine revolution against Spain."},
+  {q:"What is the national language of the Philippines based on?", opts:["Cebuano","Ilocano","Tagalog","Hiligaynon"], a:2,
+   fact:"Filipino, the national language, is based largely on Tagalog, though it also draws vocabulary from other Philippine languages."},
+  {q:"What is the famous chocolate-colored geological formation in Bohol called?", opts:["Chocolate Hills","Cacao Mounds","Sweet Peaks","Tsokolate Ridge"], a:0,
+   fact:"The Chocolate Hills are over 1,000 grass-covered limestone mounds that turn brown in the dry season, giving them their name."},
+  {q:"Which festival in Cebu is famous for honoring the Santo Niño with street dancing?", opts:["Panagbenga","Sinulog","MassKara","Ati-Atihan"], a:1,
+   fact:"The Sinulog Festival in Cebu is one of the biggest and most colorful festivals in the Philippines, held every third Sunday of January."},
+  {q:"What is 'adobo' primarily known as?", opts:["A dessert","A cooking method/dish using vinegar and soy sauce","A dance","A woven fabric"], a:1,
+   fact:"Adobo is often considered an unofficial national dish, made by braising meat in vinegar, soy sauce, garlic, and spices."},
+  {q:"Which body of water separates the Philippines from Taiwan?", opts:["Sulu Sea","Bashi Channel","Celebes Sea","Visayan Sea"], a:1,
+   fact:"The Bashi Channel lies between the northern Philippines (Batanes) and Taiwan."},
+  {q:"What is 'Balikbayan box' commonly used for?", opts:["Storing rice harvests","Sending gifts and goods to family from abroad","A type of ballot box","Carrying fish catch"], a:1,
+   fact:"A balikbayan box is a large box Filipinos overseas fill with goods and ship home to family in the Philippines."},
+  {q:"Who led the Philippine Revolution and became the first President of the Philippines?", opts:["Jose Rizal","Emilio Aguinaldo","Andres Bonifacio","Antonio Luna"], a:1,
+   fact:"Emilio Aguinaldo became the first President of the Philippines after declaring independence from Spain in 1898."},
+  {q:"What is the traditional Filipino dress for women called?", opts:["Barong Tagalog","Terno / Baro't Saya","Malong","Habi"], a:1,
+   fact:"The Terno, and its earlier form the Baro't Saya, is the traditional formal dress for Filipino women, known for its butterfly sleeves."},
+  {q:"What is the male counterpart formal attire called?", opts:["Barong Tagalog","Malong","Salakot","Bahag"], a:0,
+   fact:"The Barong Tagalog is a lightweight, embroidered formal shirt traditionally made from piña or jusi fabric."},
+  {q:"Mayon Volcano, famous for its near-perfect cone shape, is located in which region?", opts:["Bicol","Ilocos","Cordillera","Caraga"], a:0,
+   fact:"Mayon Volcano in Albay, Bicol Region, is famous worldwide for its symmetrical cone shape."},
+  {q:"What game uses seashells or pebbles and a wooden board with pits?", opts:["Patintero","Sungka","Tumbang Preso","Luksong Tinik"], a:1,
+   fact:"Sungka is a traditional Filipino board game played by moving shells or pebbles between carved pits."},
+  {q:"What is the longest river in the Philippines?", opts:["Pasig River","Agno River","Cagayan River","Rio Grande de Mindanao"], a:2,
+   fact:"The Cagayan River in northern Luzon is the longest river in the Philippines."},
+  {q:"Which Philippine island is known as the country's 'Last Frontier' for its biodiversity?", opts:["Palawan","Siargao","Boracay","Camiguin"], a:0,
+   fact:"Palawan is often called the country's 'Last Frontier' due to its rich, relatively untouched biodiversity."},
+  {q:"What is 'kundiman'?", opts:["A type of dagger","A traditional love song genre","A rice cake","A fishing net"], a:1,
+   fact:"Kundiman is a genre of traditional Filipino love songs, often slow and romantic, popular in the early 20th century."},
+  {q:"Which Philippine president declared Martial Law in 1972?", opts:["Ferdinand Marcos","Diosdado Macapagal","Ramon Magsaysay","Carlos Garcia"], a:0,
+   fact:"President Ferdinand Marcos declared Martial Law in September 1972, a period that lasted until 1981."},
+  {q:"What is the popular Filipino street food made of chicken or pork blood?", opts:["Betamax","Isaw","Dinuguan","Kwek-kwek"], a:2,
+   fact:"Dinuguan is a savory stew made with meat simmered in a rich sauce of pig's blood, vinegar, and spices."},
+  {q:"Which strait separates Luzon from the Visayas islands?", opts:["San Bernardino Strait","Surigao Strait","Verde Island Passage","Balabac Strait"], a:0,
+   fact:"The San Bernardino Strait lies between southern Luzon and the northern Visayas, connecting to the Pacific Ocean."},
+  {q:"What is 'pasalubong'?", opts:["A wedding gift","A homecoming gift or souvenir for family","A burial ritual","A harvest festival"], a:1,
+   fact:"Pasalubong refers to gifts or souvenirs brought home for family and friends after a trip."},
+  {q:"Which Visayan island is famous for its white sand beaches and was once ranked world's best?", opts:["Bohol","Siquijor","Boracay","Guimaras"], a:2,
+   fact:"Boracay, known for its powdery white sand, has repeatedly been ranked among the best beaches in the world."},
+  {q:"What is the term for a traditional Filipino community spirit of cooperation?", opts:["Bayanihan","Utang na loob","Pakikisama","Hiya"], a:0,
+   fact:"Bayanihan describes the spirit of communal unity and cooperation, famously depicted by neighbors carrying a house together."},
+  {q:"Which fruit is the Philippines one of the world's top producers of, alongside bananas?", opts:["Durian","Mango","Rambutan","Lanzones"], a:1,
+   fact:"The Philippines, especially Guimaras, is renowned for producing some of the sweetest mangoes in the world."},
+  {q:"What is the name of the Spanish colonial walled city within Manila?", opts:["Intramuros","Malacañang","Binondo","Fort Santiago"], a:0,
+   fact:"Intramuros, meaning 'within the walls,' is the historic walled area of Manila built during Spanish colonization."},
+  {q:"Which is considered the oldest Chinatown in the world, located in Manila?", opts:["Binondo","Divisoria","Quiapo","Escolta"], a:0,
+   fact:"Binondo, established in 1594, is recognized as the oldest Chinatown in the world."},
+  {q:"What traditional Filipino lantern is associated with Christmas?", opts:["Parol","Farol","Lampara","Ilaw"], a:0,
+   fact:"The parol is a star-shaped Christmas lantern, often made of bamboo and paper, symbolizing the Star of Bethlehem."},
+  {q:"Which volcano's 1991 eruption was one of the largest of the 20th century?", opts:["Mayon","Taal","Pinatubo","Kanlaon"], a:2,
+   fact:"Mount Pinatubo's 1991 eruption in Zambales was one of the largest volcanic eruptions of the 20th century, affecting global temperatures."},
+  {q:"What is 'kulintang'?", opts:["A bladed weapon","A traditional gong ensemble music","A woven mat","A rice wine"], a:1,
+   fact:"Kulintang refers to a traditional ensemble music using a row of small gongs, common among Muslim and indigenous groups in Mindanao."},
+  {q:"What is the smallest region of the Philippines by land area?", opts:["CALABARZON","National Capital Region (Metro Manila)","Bicol","Caraga"], a:1,
+   fact:"The National Capital Region (Metro Manila) is the smallest region by land area but the most densely populated."},
+  {q:"Which of these is a traditional Filipino dance imitating a bird?", opts:["Tinikling","Itik-Itik","Pandanggo sa Ilaw","Cariñosa"], a:1,
+   fact:"Itik-Itik mimics the movements of a duck (itik), including its waddle and the way it shakes off water."},
+  {q:"What is the bamboo pole dance where dancers step between clapping poles?", opts:["Tinikling","Singkil","Maglalatik","Binasuan"], a:0,
+   fact:"Tinikling involves dancers skillfully stepping between bamboo poles that are clapped together in rhythm, mimicking the movement of the tikling bird."},
+  {q:"What is the name of the Muslim royal dance performed with fans or scarves and clashing bamboo poles, from Mindanao?", opts:["Singkil","Sagayan","Pangalay","Kappa Malong-Malong"], a:0,
+   fact:"Singkil is a royal dance from the Maranao people of Mindanao, traditionally performed by a princess stepping between clashing bamboo poles."},
+  {q:"What is the term for the Filipino value of showing gratitude or debt of gratitude?", opts:["Utang na loob","Hiya","Amor propio","Pakikipagkapwa"], a:0,
+   fact:"'Utang na loob' refers to a deep sense of gratitude and reciprocal obligation, a core value in Filipino culture."},
+  {q:"Which is the second largest island in the Philippines?", opts:["Cebu","Mindanao","Panay","Samar"], a:3,
+   fact:"Samar is the third largest island; Mindanao is the second largest island in the Philippines after Luzon."},
+  {q:"What crispy pork dish is Cebu especially famous for?", opts:["Lechon","Crispy pata","Chicharon","Sisig"], a:0,
+   fact:"Cebu is particularly famous for its lechon (whole roasted pig), often praised as some of the best in the country."},
+  {q:"What sizzling dish made from pig's face and liver originated in Pampanga?", opts:["Bicol Express","Sisig","Bopis","Kare-kare"], a:1,
+   fact:"Sisig, made from chopped pig face and liver seasoned with calamansi and chili, originated in Pampanga."},
+  {q:"What is the name for a traditional Filipino wake or vigil for the dead?", opts:["Pasiyam","Lamay","Undas","Babaylan"], a:1,
+   fact:"'Lamay' refers to the traditional wake held before a burial, where family and friends gather to keep vigil."},
+  {q:"Which strait is home to some of the world's richest marine biodiversity, part of the Coral Triangle?", opts:["Verde Island Passage","Sulu Sea","Tañon Strait","Mindoro Strait"], a:0,
+   fact:"The Verde Island Passage is recognized as the center of the 'Coral Triangle,' one of the most biodiverse marine areas on Earth."},
+  {q:"What is the Filipino term for a small motorized tricycle used as public transport?", opts:["Tricycle","Kuliglig","Habal-habal","Traysikel"], a:3,
+   fact:"'Traysikel' (tricycle) is a common mode of local transport, a motorcycle with an attached sidecar."},
+  {q:"What is 'habal-habal'?", opts:["A type of soup","A motorcycle taxi","A folk instrument","A rice cake"], a:1,
+   fact:"Habal-habal is an informal motorcycle taxi service, common in rural areas of the Philippines, often carrying multiple passengers."},
+  {q:"Which is the largest lake in the Philippines?", opts:["Laguna de Bay","Lake Lanao","Taal Lake","Lake Mainit"], a:0,
+   fact:"Laguna de Bay, near Metro Manila, is the largest lake in the Philippines."},
+  {q:"What is the name of the giant fruit bat native to the Philippines?", opts:["Philippine Eagle","Golden-crowned Flying Fox","Tamaraw","Tarsier"], a:1,
+   fact:"The Golden-crowned Flying Fox, found in the Philippines, is one of the largest bat species in the world."},
+  {q:"What is the name of the Philippines' only bird of prey considered the national bird?", opts:["Maya bird","Philippine Eagle","Kalaw (Hornbill)","Kingfisher"], a:1,
+   fact:"The Philippine Eagle, one of the largest and most powerful eagles in the world, is the country's national bird."},
+  {q:"Which small brown bird was formerly declared the Philippines' national bird before the eagle?", opts:["Maya bird","Tarictic hornbill","Philippine cockatoo","Mynah"], a:0,
+   fact:"The maya bird (Eurasian tree sparrow) was the earlier national bird before the Philippine Eagle took the title in 1995."},
+  {q:"What is the term for the traditional Filipino woven mat used for sleeping?", opts:["Banig","Malong","Manta","Bayong"], a:0,
+   fact:"A banig is a handwoven mat, traditionally made from pandan or buri leaves, used for sleeping or sitting."},
+  {q:"Which region is known as the 'Rice Granary of the Philippines'?", opts:["Central Luzon","Bicol","Western Visayas","Northern Mindanao"], a:0,
+   fact:"Central Luzon, with its vast flatlands, is often called the 'Rice Granary of the Philippines' for its major rice production."},
+  {q:"What is 'kalesa'?", opts:["A horse-drawn carriage","A bamboo raft","A type of guitar","A rice basket"], a:0,
+   fact:"A kalesa is a traditional horse-drawn carriage, still used today in some historic areas like Intramuros for tourism."},
+  {q:"Which is the second-highest mountain in the Philippines?", opts:["Mount Apo","Mount Dulang-dulang","Mount Pulag","Mount Kitanglad"], a:1,
+   fact:"Mount Dulang-dulang in Bukidnon is the second-highest peak in the Philippines, after Mount Apo."},
+  {q:"What is the highest mountain in the Philippines?", opts:["Mount Apo","Mount Pulag","Mount Mayon","Mount Kanlaon"], a:0,
+   fact:"Mount Apo in Mindanao is the highest mountain in the Philippines, standing at about 2,954 meters."},
+  {q:"What is 'balut'?", opts:["A fertilized duck egg delicacy","A type of dried fish","A rice wine","A sticky rice dessert"], a:0,
+   fact:"Balut is a fertilized duck egg, boiled and eaten from the shell, a popular street food delicacy."},
+  {q:"Which fabric, woven from pineapple leaf fibers, is used for the Barong Tagalog?", opts:["Piña","Abaca","Jusi","T'nalak"], a:0,
+   fact:"Piña fabric, made from pineapple leaf fibers, is prized for its delicate, sheer texture and used for formal Barong Tagalog."},
+  {q:"What is 't'nalak'?", opts:["A woven cloth made from abaca by the T'boli people","A folk dance","A war shield","A traditional drum"], a:0,
+   fact:"T'nalak is a traditional cloth handwoven from abaca fibers by the T'boli people of South Cotabato, considered sacred."},
+  {q:"Which is the busiest and largest port in the Philippines?", opts:["Port of Cebu","Port of Manila","Port of Davao","Port of Batangas"], a:1,
+   fact:"The Port of Manila is the largest and busiest seaport in the Philippines, serving as the main gateway for international trade."},
+  {q:"What is the traditional headgear worn by farmers, often made of woven straw or nipa?", opts:["Salakot","Buntal hat","Sombrero","Pandan cap"], a:0,
+   fact:"The salakot is a traditional wide-brimmed hat, often woven from rattan, bamboo, or nipa, used for protection from sun and rain."},
+  {q:"Which island province is famous for producing 'buntal' hats and fine straw weaving?", opts:["Bohol","Romblon","Quezon (Baler area)","Marinduque"], a:1,
+   fact:"Romblon, and especially the town of Lucban in Quezon, are known for fine hat weaving using buntal fiber."},
+  {q:"What is the term for a Filipino godparent, often chosen at baptism or wedding?", opts:["Ninong/Ninang","Kumpare/Kumare","Ate/Kuya","Lolo/Lola"], a:0,
+   fact:"Ninong (godfather) and Ninang (godmother) are chosen to serve as sponsors, especially at baptisms and weddings, in Filipino tradition."},
+  {q:"What does 'kuya' mean in Filipino family terms?", opts:["Older sister","Older brother","Uncle","Grandfather"], a:1,
+   fact:"'Kuya' is a term of respect used for an older brother or older male relative/friend."},
+  {q:"What does 'ate' mean in Filipino family terms?", opts:["Older sister","Younger sister","Aunt","Grandmother"], a:0,
+   fact:"'Ate' is a term of respect used for an older sister or older female relative/friend."},
+  {q:"Which Philippine festival is known as the 'Mother of All Philippine Festivals,' held in Kalibo, Aklan?", opts:["Ati-Atihan","Sinulog","Dinagyang","Pahiyas"], a:0,
+   fact:"The Ati-Atihan Festival in Kalibo is often called the 'Mother of All Philippine Festivals,' featuring tribal dancing and painted faces."},
+  {q:"Which festival in Lucban, Quezon, decorates houses with colorful rice-based decor called 'kiping'?", opts:["Pahiyas","MassKara","Higantes","Kadayawan"], a:0,
+   fact:"The Pahiyas Festival in Lucban celebrates the harvest by decorating houses with kiping (colorful rice wafers) and produce."},
+  {q:"Which festival in Bacolod is known as the 'City of Smiles' celebration with masked dancers?", opts:["MassKara Festival","Kadayawan Festival","Panagbenga Festival","Dinagyang Festival"], a:0,
+   fact:"The MassKara Festival in Bacolod features dancers in colorful smiling masks, giving the city its nickname 'City of Smiles.'"},
+  {q:"Which festival in Davao celebrates the bounty of harvest and Indigenous culture, its name meaning 'gift'?", opts:["Kadayawan Festival","Kaamulan Festival","T'boli Festival","Lanzones Festival"], a:0,
+   fact:"The Kadayawan Festival in Davao celebrates the bounty of harvest, flowers, and fruits, with its name derived from 'madayaw' meaning good or beautiful."},
+  {q:"What is the flower festival held annually in Baguio City called?", opts:["Panagbenga Festival","Pahiyas Festival","Flores de Mayo","Kadayawan Festival"], a:0,
+   fact:"The Panagbenga Festival, or Baguio Flower Festival, features elaborate flower floats and street dancing celebrating the city's blooms."},
+  {q:"What is 'Flores de Mayo'?", opts:["A May flower festival honoring the Virgin Mary","A harvest thanksgiving festival","An Independence Day parade","A New Year tradition"], a:0,
+   fact:"Flores de Mayo is a month-long Marian celebration held every May, culminating in the Santacruzan procession."},
+  {q:"What is the procession featuring women in elaborate gowns representing biblical and historical figures, held in May?", opts:["Santacruzan","Flores de Mayo Parade","Pasyon","Visita Iglesia"], a:0,
+   fact:"The Santacruzan is a religious-historical procession honoring the finding of the True Cross, featuring women in elegant dresses as biblical/historical figures."},
+  {q:"Which practice involves visiting seven churches during Holy Week?", opts:["Visita Iglesia","Pabasa","Salubong","Senakulo"], a:0,
+   fact:"Visita Iglesia is a Lenten tradition of visiting seven (or more) churches, usually on Maundy Thursday, for prayer and reflection."},
+  {q:"What is the Filipino term for a New Year's Eve tradition of displaying round fruits for luck?", opts:["Media Noche","Displaying 12 round fruits","Puto Bumbong ritual","Ang Pasko"], a:1,
+   fact:"Many Filipino households display 12 round fruits on New Year's Eve, believed to bring prosperity and luck for each month of the year."},
+  {q:"What is 'Media Noche'?", opts:["A midnight feast on New Year's Eve","A church bell tradition","A Christmas carol","A fireworks display"], a:0,
+   fact:"Media Noche is the traditional Filipino midnight feast shared with family to welcome the New Year."},
+  {q:"Which sticky rice delicacy wrapped in banana leaves is a popular Christmas street food?", opts:["Puto Bumbong","Bibingka","Both Puto Bumbong and Bibingka","Suman only"], a:2,
+   fact:"Puto Bumbong (purple sticky rice) and Bibingka (rice cake) are both popular street foods sold outside churches during the Christmas season."},
+  {q:"What is 'Simbang Gabi'?", opts:["A series of dawn masses before Christmas","A wedding ceremony","A funeral tradition","A harvest ritual"], a:0,
+   fact:"Simbang Gabi refers to the nine consecutive dawn masses held from December 16 to 24, leading up to Christmas."},
+  {q:"Which is the longest Christmas season celebration in the world, associated with the Philippines?", opts:["The Philippine Christmas season (Sept to Jan)","Advent season","Yuletide festival","Pasko ng Bayan"], a:0,
+   fact:"The Philippines is famous for having the world's longest Christmas season, with decorations and songs starting as early as September."},
+  {q:"What is the term for the Filipino trait of being resilient and finding humor even in hardship?", opts:["Diskarte","Bahala na","Lakas ng loob","Tiwala sa sarili"], a:1,
+   fact:"'Bahala na' reflects a resilient, come-what-may attitude, often invoked when facing uncertainty or difficulty."},
+  {q:"What does the Filipino phrase 'diskarte' generally mean?", opts:["Resourcefulness or the ability to improvise solutions","A traditional dance style","A type of local currency","A farming technique"], a:0,
+   fact:"'Diskarte' refers to resourcefulness, cleverness, or the ability to find creative solutions to problems."},
+  {q:"What is the name of the famous man-made forest of mahogany trees in Bohol?", opts:["Bilar Man-made Forest","Loboc Forest Park","Chocolate Hills Grove","Anda Forest"], a:0,
+   fact:"The Bilar Man-Made Forest in Bohol is a dense two-kilometer stretch of mahogany trees planted decades ago, now a popular tourist stop."},
+  {q:"Which underground river in Palawan is a UNESCO World Heritage Site and New7Wonders of Nature?", opts:["Puerto Princesa Subterranean River","Hinatuan Enchanted River","Loboc River","Cagayan River Cave"], a:0,
+   fact:"The Puerto Princesa Subterranean River is a UNESCO World Heritage Site, famous for its navigable underground river through limestone caves."},
+  {q:"Which island group is a popular surfing destination known as the 'Surfing Capital of the Philippines'?", opts:["Siargao","Catanduanes","La Union","Batanes"], a:0,
+   fact:"Siargao Island in Surigao del Norte is widely known as the 'Surfing Capital of the Philippines,' home to the famous Cloud 9 break."},
+  {q:"Which northernmost province, known for its rolling hills and stone houses, is often called the 'Home of the Wind'?", opts:["Batanes","Ilocos Norte","Cagayan","Apayao"], a:0,
+   fact:"Batanes, the northernmost province, is known for its stone houses, rolling hills, and strong winds, earning it the nickname 'Home of the Wind.'"},
+  {q:"What is the traditional Ivatan house in Batanes, built to withstand strong typhoons, called?", opts:["Sinadumparan","Bahay Kubo","Torogan","Nipa Hut"], a:0,
+   fact:"The sinadumparan is a traditional Ivatan stone house in Batanes, built with thick limestone walls and cogon-thatched roofs to withstand typhoons."},
+  {q:"What is the traditional royal house of the Maranao people in Mindanao called?", opts:["Torogan","Bahay na Bato","Sinadumparan","Nipa Hut"], a:0,
+   fact:"The Torogan is the traditional royal house of the Maranao people, known for its elaborately carved panolong (beam ends)."},
+  {q:"What is 'Bahay na Bato'?", opts:["A colonial-era house made of stone and wood","A rice storage hut","A fishing shelter","A watchtower"], a:0,
+   fact:"Bahay na Bato ('house of stone') is a colonial-era architectural style combining native materials with Spanish influence, common in old town centers."},
+  {q:"Which martial law-era symbol became a rallying cry during the 1986 EDSA People Power Revolution?", opts:["Laban sign (L hand sign)","Bayanihan flag","Katipunan sun","Yellow confetti"], a:0,
+   fact:"The 'Laban' (L) hand sign became a widely recognized symbol of the opposition movement during the 1986 EDSA People Power Revolution."},
+  {q:"What event in February 1986 peacefully ended the Marcos dictatorship?", opts:["EDSA People Power Revolution","Mendiola Massacre","Plaza Miranda bombing","Battle of Manila"], a:0,
+   fact:"The EDSA People Power Revolution was a series of peaceful demonstrations in 1986 that ended Ferdinand Marcos's 20-year rule."},
+  {q:"Who was the first woman President of the Philippines, taking office after the 1986 revolution?", opts:["Gloria Macapagal-Arroyo","Corazon Aquino","Imelda Marcos","Miriam Defensor Santiago"], a:1,
+   fact:"Corazon Aquino became the first woman President of the Philippines in 1986, following the People Power Revolution."},
+  {q:"What is the secret revolutionary society founded by Andres Bonifacio that fought against Spanish rule?", opts:["Katipunan","La Liga Filipina","Propaganda Movement","Malolos Congress"], a:0,
+   fact:"The Katipunan, founded by Andres Bonifacio in 1892, was a secret society that led the Philippine Revolution against Spain."},
+  {q:"In what year did the Philippines declare independence from Spain?", opts:["1896","1898","1901","1946"], a:1,
+   fact:"Philippine independence from Spain was declared on June 12, 1898, by Emilio Aguinaldo in Kawit, Cavite."},
+  {q:"In what year did the Philippines gain full independence from the United States?", opts:["1935","1942","1946","1950"], a:2,
+   fact:"The Philippines gained full independence from the United States on July 4, 1946, later commemorated on June 12 as the official Independence Day."},
+  {q:"Which colonial power ruled the Philippines for the shortest period among Spain, the US, and Japan?", opts:["Spain","United States","Japan","Britain"], a:2,
+   fact:"Japan occupied the Philippines for about 3 years during World War II (1942-1945), the shortest of the major colonial periods."},
+  {q:"What historic trade route connected Manila to Acapulco during Spanish colonial rule?", opts:["Manila-Acapulco Galleon Trade","Silk Road","Spice Route","Trans-Pacific Trade Pact"], a:0,
+   fact:"The Manila-Acapulco Galleon Trade (1565-1815) connected the Philippines to Mexico, exchanging Asian goods for silver across the Pacific."},
+  {q:"Which battle in WWII forced thousands of Filipino and American soldiers on a deadly forced march?", opts:["Battle of Leyte Gulf","Bataan Death March","Battle of Manila","Corregidor Siege"], a:1,
+   fact:"The Bataan Death March in 1942 forced tens of thousands of Filipino and American POWs to march under brutal conditions, resulting in many deaths."},
+  {q:"Which island did General Douglas MacArthur famously wade ashore to fulfill his 'I shall return' promise?", opts:["Leyte","Corregidor","Luzon","Mindanao"], a:0,
+   fact:"MacArthur famously waded ashore at Leyte in October 1944, fulfilling his promise to return and liberate the Philippines."},
+  {q:"What is the currency of the Philippines?", opts:["Peso","Ringgit","Baht","Rupiah"], a:0,
+   fact:"The Philippine peso (₱) is the official currency of the Philippines."},
+  {q:"How many islands does the Philippines officially have, according to NAMRIA?", opts:["About 500","About 2,000","About 7,641","About 10,000"], a:2,
+   fact:"The Philippines officially has 7,641 islands, as mapped and verified by the National Mapping and Resource Information Authority."},
+];
+
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function pickQuestions(){
+  const picked = shuffle(questionPool).slice(0, 10);
+  return picked.map(item => {
+    const correctText = item.opts[item.a];
+    const newOpts = shuffle(item.opts);
+    return { q: item.q, opts: newOpts, a: newOpts.indexOf(correctText), fact: item.fact };
+  });
+}
+
+let questions = pickQuestions();
+let current = 0, score = 0, answered = false;
+const quizArea = document.getElementById('quizArea');
+
+function render(){
+  if(current >= questions.length){ renderEnd(); return; }
+  const q = questions[current];
+  answered = false;
+  quizArea.innerHTML = `
+    <div class="progress-row"><span>Question ${current+1} of ${questions.length}</span><span class="score-tag">Score: ${score}</span></div>
+    <div class="bar"><div class="bar-fill" style="width:${(current/questions.length)*100}%"></div></div>
+    <div class="question">${q.q}</div>
+    <div class="options" id="opts"></div>
+    <div class="feedback" id="feedback"></div>
+    <div class="footer-row"><span></span><button class="next-btn" id="nextBtn">${current === questions.length-1 ? 'See results' : 'Next question'}</button></div>
+  `;
+  const optsDiv = document.getElementById('opts');
+  q.opts.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'opt';
+    btn.textContent = opt;
+    btn.onclick = () => selectAnswer(i);
+    optsDiv.appendChild(btn);
+  });
+  document.getElementById('nextBtn').onclick = () => { current++; render(); };
+}
+
+function selectAnswer(i){
+  if(answered) return;
+  answered = true;
+  const q = questions[current];
+  const opts = document.querySelectorAll('.opt');
+  opts.forEach((btn, idx) => {
+    btn.disabled = true;
+    if(idx === q.a) btn.classList.add('correct');
+    else if(idx === i) btn.classList.add('wrong');
+  });
+  if(i === q.a) score++;
+  const fb = document.getElementById('feedback');
+  fb.textContent = q.fact;
+  fb.classList.add('show');
+  document.getElementById('nextBtn').classList.add('show');
+}
+
+function renderEnd(){
+  let best = 0;
+  try{
+    const stored = localStorage.getItem('filipinoTriviaHighScore');
+    best = stored ? parseInt(stored, 10) : 0;
+    if(score > best){ localStorage.setItem('filipinoTriviaHighScore', String(score)); best = score; }
+  }catch(e){ /* storage unavailable, skip */ }
+
+  let msg = "Not bad — try again to level up!";
+  if(score === questions.length) msg = "Perfect score! Tunay na Pilipino sa puso!";
+  else if(score >= questions.length * 0.7) msg = "Ang galing! You really know your stuff.";
+  else if(score >= questions.length * 0.4) msg = "Good try! A little more reading and you'll ace it.";
+
+  quizArea.innerHTML = `
+    <div class="end">
+      <h2>Quiz complete!</h2>
+      <div class="big">${score} / ${questions.length}</div>
+      <p>${msg}</p>
+      <button class="again-btn" id="againBtn">Play again</button>
+      <div class="high">Best score this browser: ${best} / ${questions.length}</div>
+    </div>
+  `;
+  document.getElementById('againBtn').onclick = () => { questions = pickQuestions(); current = 0; score = 0; render(); };
+}
+
+render();
+</script>
+</body>
+</html>
